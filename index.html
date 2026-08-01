@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Tesseract Interactive — 3D Visualization & Consulting</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Unbounded:wght@400;600;800;900&family=Sora:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg: #120B24;
+    --bg-elevated: #1B1338;
+    --surface: #241A47;
+    --surface-line: rgba(180, 150, 255, 0.16);
+    --violet: #7B2FF7;
+    --magenta: #FF3EA5;
+    --cyan: #2EE6C4;
+    --text: #F4EFFF;
+    --text-dim: #ABA0CC;
+    --text-faint: #6E6390;
+  }
+
+  *{ box-sizing: border-box; margin:0; padding:0; }
+
+  html{ scroll-behavior: smooth; }
+
+  body{
+    background: var(--bg);
+    color: var(--text);
+    font-family: 'Sora', sans-serif;
+    font-weight: 400;
+    line-height: 1.6;
+    overflow-x: hidden;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ animation-duration: 0.001ms !important; animation-iteration-count: 1 !important; transition-duration: 0.001ms !important; }
+  }
+
+  a{ color: inherit; text-decoration: none; }
+
+  .wrap{
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 0 32px;
+  }
+
+  h1, h2, h3, .display{
+    font-family: 'Unbounded', sans-serif;
+    letter-spacing: -0.01em;
+  }
+
+  .eyebrow{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12.5px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--cyan);
+  }
+
+  ::selection{ background: var(--magenta); color: var(--bg); }
+
+  a:focus-visible, button:focus-visible{
+    outline: 2px solid var(--cyan);
+    outline-offset: 3px;
+  }
+
+  /* ---------- background ambience ---------- */
+  .grain-glow{
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(60% 40% at 85% -5%, rgba(123,47,247,0.35), transparent 60%),
+      radial-gradient(45% 35% at 8% 12%, rgba(255,62,165,0.18), transparent 60%),
+      radial-gradient(60% 50% at 50% 110%, rgba(46,230,196,0.10), transparent 60%);
+  }
+
+  /* ---------- nav ---------- */
+  header{
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    backdrop-filter: blur(14px);
+    background: rgba(18, 11, 36, 0.72);
+    border-bottom: 1px solid var(--surface-line);
+  }
+  nav{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 18px 32px;
+    max-width: 1180px;
+    margin: 0 auto;
+  }
+  .logo{
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    font-family: 'Unbounded', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+  }
+  .logo-mark{ width: 20px; height: 20px; flex-shrink: 0; }
+  .logo b{ color: var(--cyan); font-weight: 900; }
+  .nav-links{
+    display: flex;
+    gap: 34px;
+    font-size: 14.5px;
+    color: var(--text-dim);
+  }
+  .nav-links a{ transition: color 0.2s ease; }
+  .nav-links a:hover{ color: var(--cyan); }
+  .nav-cta{
+    font-size: 13.5px;
+    font-family: 'JetBrains Mono', monospace;
+    padding: 9px 18px;
+    border: 1px solid var(--cyan);
+    border-radius: 999px;
+    color: var(--cyan);
+    transition: all 0.2s ease;
+  }
+  .nav-cta:hover{ background: var(--cyan); color: var(--bg); }
+  .nav-mobile-hide{ display: flex; }
+  @media (max-width: 720px){
+    .nav-mobile-hide{ display: none; }
+  }
+
+  /* ---------- hero ---------- */
+  .hero{
+    position: relative;
+    z-index: 1;
+    padding: 96px 0 70px;
+    display: grid;
+    grid-template-columns: 1.1fr 0.9fr;
+    gap: 40px;
+    align-items: center;
+  }
+  @media (max-width: 900px){
+    .hero{ grid-template-columns: 1fr; padding: 56px 0 40px; }
+  }
+  .hero h1{
+    font-size: clamp(2.4rem, 5.2vw, 4rem);
+    font-weight: 800;
+    line-height: 1.05;
+    margin: 18px 0 22px;
+  }
+  .hero h1 .grad{
+    background: linear-gradient(100deg, var(--cyan), var(--violet) 55%, var(--magenta));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+  .hero p{
+    font-size: 17px;
+    color: var(--text-dim);
+    max-width: 480px;
+    margin-bottom: 34px;
+  }
+  .hero-ctas{ display: flex; gap: 14px; flex-wrap: wrap; }
+  .btn-primary{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    padding: 14px 26px;
+    border-radius: 10px;
+    background: linear-gradient(100deg, var(--violet), var(--magenta));
+    color: white;
+    display: inline-block;
+    box-shadow: 0 8px 30px -8px rgba(255, 62, 165, 0.5);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+  }
+  .btn-primary:hover{ transform: translateY(-2px); box-shadow: 0 12px 34px -6px rgba(255, 62, 165, 0.65); }
+  .btn-ghost{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 14px;
+    padding: 14px 22px;
+    border-radius: 10px;
+    border: 1px solid var(--surface-line);
+    color: var(--text-dim);
+    transition: border-color 0.2s ease, color 0.2s ease;
+  }
+  .btn-ghost:hover{ border-color: var(--cyan); color: var(--cyan); }
+
+  /* ---------- tesseract signature ---------- */
+  .tess-stage{
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 380px;
+    perspective: 900px;
+  }
+  .tess{
+    width: 260px;
+    height: 260px;
+    position: relative;
+    transform-style: preserve-3d;
+    animation: spin 22s linear infinite;
+  }
+  @keyframes spin{
+    from{ transform: rotateX(18deg) rotateY(0deg); }
+    to{ transform: rotateX(18deg) rotateY(360deg); }
+  }
+  .tess svg{ position: absolute; inset: 0; width: 100%; height: 100%; overflow: visible; }
+  .tess .inner{
+    animation: innerspin 14s linear infinite reverse;
+    transform-origin: center;
+  }
+  @keyframes innerspin{
+    from{ transform: rotate(0deg) scale(0.55); }
+    to{ transform: rotate(360deg) scale(0.55); }
+  }
+  .tess-caption{
+    position: absolute;
+    bottom: -6px;
+    left: 50%;
+    transform: translateX(-50%);
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11.5px;
+    letter-spacing: 0.1em;
+    color: var(--text-faint);
+    white-space: nowrap;
+  }
+
+  /* ---------- section shared ---------- */
+  section{ position: relative; z-index: 1; padding: 90px 0; }
+  .section-head{ max-width: 620px; margin-bottom: 52px; }
+  .section-head h2{
+    font-size: clamp(1.7rem, 3.4vw, 2.5rem);
+    margin-top: 14px;
+    font-weight: 700;
+  }
+  .section-head p{ color: var(--text-dim); margin-top: 14px; font-size: 15.5px; }
+
+  /* ---------- services (faceted cards) ---------- */
+  .services-grid{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 22px;
+  }
+  @media (max-width: 900px){ .services-grid{ grid-template-columns: 1fr; } }
+
+  .facet-card{
+    position: relative;
+    background: var(--bg-elevated);
+    border: 1px solid var(--surface-line);
+    padding: 34px 28px 30px;
+    clip-path: polygon(0 0, 100% 0, 100% calc(100% - 22px), calc(100% - 22px) 100%, 0 100%);
+    transition: transform 0.25s ease, border-color 0.25s ease;
+  }
+  .facet-card:hover{ transform: translateY(-6px); border-color: var(--card-accent, var(--cyan)); }
+  .facet-card:nth-child(1){ --card-accent: var(--cyan); }
+  .facet-card:nth-child(2){ --card-accent: var(--violet); }
+  .facet-card:nth-child(3){ --card-accent: var(--magenta); }
+  .facet-icon{
+    width: 42px; height: 42px;
+    margin-bottom: 22px;
+  }
+  .facet-card h3{
+    font-size: 19px;
+    font-weight: 600;
+    margin-bottom: 12px;
+  }
+  .facet-card p{ color: var(--text-dim); font-size: 14.5px; }
+  .facet-tag{
+    display: inline-block;
+    margin-top: 18px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    letter-spacing: 0.08em;
+    color: var(--card-accent, var(--cyan));
+    text-transform: uppercase;
+  }
+
+  /* ---------- process ---------- */
+  .process-alt{ background: var(--bg-elevated); border-top: 1px solid var(--surface-line); border-bottom: 1px solid var(--surface-line); }
+  .process-row{
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0;
+  }
+  @media (max-width: 900px){ .process-row{ grid-template-columns: 1fr 1fr; row-gap: 36px; } }
+  .process-step{
+    padding-right: 24px;
+    border-right: 1px solid var(--surface-line);
+  }
+  .process-step:last-child{ border-right: none; }
+  @media (max-width: 900px){
+    .process-step{ border-right: none; padding-right: 0; }
+  }
+  .process-num{
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 13px;
+    color: var(--text-faint);
+    margin-bottom: 14px;
+  }
+  .process-step h3{ font-size: 17px; font-weight: 600; margin-bottom: 10px; }
+  .process-step p{ color: var(--text-dim); font-size: 14px; }
+
+  /* ---------- work gallery ---------- */
+  .work-grid{
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+  }
+  @media (max-width: 900px){ .work-grid{ grid-template-columns: 1fr; } }
+  .work-tile{
+    aspect-ratio: 4/3;
+    border-radius: 14px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid var(--surface-line);
+    display: flex;
+    align-items: flex-end;
+    padding: 16px;
+  }
+  .work-tile::before{
+    content: '';
+    position: absolute; inset: 0;
+    opacity: 0.9;
+  }
+  .work-tile:nth-child(1)::before{ background: linear-gradient(135deg, #3a1a6b, #7B2FF7 55%, #2EE6C4); }
+  .work-tile:nth-child(2)::before{ background: linear-gradient(135deg, #1a2a4a, #7B2FF7 45%, #FF3EA5); }
+  .work-tile:nth-child(3)::before{ background: linear-gradient(135deg, #4a1a3a, #FF3EA5 50%, #7B2FF7); }
+  .work-tile:nth-child(4)::before{ background: linear-gradient(135deg, #0f3a35, #2EE6C4 50%, #7B2FF7); }
+  .work-tile:nth-child(5)::before{ background: linear-gradient(135deg, #3a2a0f, #FF3EA5 45%, #2EE6C4); }
+  .work-tile:nth-child(6)::before{ background: linear-gradient(135deg, #1a1140, #7B2FF7 40%, #FF3EA5 80%); }
+  .work-label{
+    position: relative;
+    z-index: 1;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 12px;
+    color: rgba(255,255,255,0.92);
+    background: rgba(10,6,20,0.45);
+    padding: 6px 10px;
+    border-radius: 6px;
+    backdrop-filter: blur(4px);
+  }
+
+  /* ---------- cta ---------- */
+  .cta-band{
+    text-align: center;
+    padding: 100px 0;
+  }
+  .cta-band h2{
+    font-size: clamp(1.8rem, 4vw, 2.8rem);
+    max-width: 640px;
+    margin: 0 auto 28px;
+  }
+
+  footer{
+    border-top: 1px solid var(--surface-line);
+    padding: 40px 0;
+    position: relative; z-index: 1;
+  }
+  .footer-row{
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 16px;
+    font-size: 13.5px;
+    color: var(--text-faint);
+    font-family: 'JetBrains Mono', monospace;
+  }
+</style>
+</head>
+<body>
+
+<div class="grain-glow"></div>
+
+<header>
+  <nav>
+    <div class="logo">
+      <svg class="logo-mark" viewBox="0 0 24 24" fill="none">
+        <rect x="4" y="4" width="10" height="10" stroke="#2EE6C4" stroke-width="1.4"/>
+        <rect x="9" y="9" width="10" height="10" stroke="#FF3EA5" stroke-width="1.4"/>
+        <line x1="4" y1="4" x2="9" y2="9" stroke="#7B2FF7" stroke-width="1.2"/>
+        <line x1="14" y1="4" x2="19" y2="9" stroke="#7B2FF7" stroke-width="1.2"/>
+        <line x1="4" y1="14" x2="9" y2="19" stroke="#7B2FF7" stroke-width="1.2"/>
+        <line x1="14" y1="14" x2="19" y2="19" stroke="#7B2FF7" stroke-width="1.2"/>
+      </svg>
+      TESSERACT <b>INTERACTIVE</b>
+    </div>
+    <div class="nav-links nav-mobile-hide">
+      <a href="#services">Services</a>
+      <a href="#process">Process</a>
+      <a href="#work">Work</a>
+      <a href="#contact">Contact</a>
+    </div>
+    <a href="#contact" class="nav-cta">Start a project</a>
+  </nav>
+</header>
+
+<main>
+  <section class="hero">
+    <div class="wrap" style="display:contents;">
+      <div>
+        <span class="eyebrow">3D consulting studio</span>
+        <h1>Another dimension<br>for your <span class="grad">vision.</span></h1>
+        <p>Tesseract Interactive turns products, spaces, and stories into photoreal 3D — rendered, rigged, and ready before a single physical thing exists.</p>
+        <div class="hero-ctas">
+          <a href="#contact" class="btn-primary">Start a project →</a>
+          <a href="#work" class="btn-ghost">See the work</a>
+        </div>
+      </div>
+      <div class="tess-stage">
+        <div class="tess">
+          <svg viewBox="0 0 200 200">
+            <polygon points="20,20 180,20 180,180 20,180" fill="none" stroke="#2EE6C4" stroke-width="1.6"/>
+            <line x1="20" y1="20" x2="60" y2="60" stroke="#7B2FF7" stroke-width="1.2"/>
+            <line x1="180" y1="20" x2="140" y2="60" stroke="#7B2FF7" stroke-width="1.2"/>
+            <line x1="180" y1="180" x2="140" y2="140" stroke="#7B2FF7" stroke-width="1.2"/>
+            <line x1="20" y1="180" x2="60" y2="140" stroke="#7B2FF7" stroke-width="1.2"/>
+          </svg>
+          <svg class="inner" viewBox="0 0 200 200">
+            <polygon points="60,60 140,60 140,140 60,140" fill="none" stroke="#FF3EA5" stroke-width="1.8"/>
+          </svg>
+        </div>
+        <span class="tess-caption">// hypercube.proj — 4D→2D</span>
+      </div>
+    </div>
+  </section>
+
+  <section id="services">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">What we build</span>
+        <h2>Three disciplines, one pipeline.</h2>
+        <p>Every engagement starts with the same question — what does this need to look like before anyone can see it? — and ends in whichever discipline answers that best.</p>
+      </div>
+      <div class="services-grid">
+        <div class="facet-card">
+          <svg class="facet-icon" viewBox="0 0 42 42" fill="none"><path d="M21 4 L37 13 V29 L21 38 L5 29 V13 Z" stroke="#2EE6C4" stroke-width="1.6"/><path d="M5 13 L21 22 L37 13" stroke="#2EE6C4" stroke-width="1.2"/><line x1="21" y1="22" x2="21" y2="38" stroke="#2EE6C4" stroke-width="1.2"/></svg>
+          <h3>Product Visualization</h3>
+          <p>Render the thing before it's made. Photoreal hero shots, 360° configurators, and marketing renders that outperform photography and ship on your timeline, not a studio's.</p>
+          <span class="facet-tag">Product / Industrial</span>
+        </div>
+        <div class="facet-card">
+          <svg class="facet-icon" viewBox="0 0 42 42" fill="none"><rect x="6" y="14" width="30" height="22" stroke="#7B2FF7" stroke-width="1.6"/><path d="M6 14 L21 4 L36 14" stroke="#7B2FF7" stroke-width="1.6"/><line x1="21" y1="4" x2="21" y2="14" stroke="#7B2FF7" stroke-width="1.2"/></svg>
+          <h3>Architectural &amp; Interior Visualization</h3>
+          <p>Walk clients and stakeholders through spaces that don't exist yet. Exteriors, interiors, and fly-throughs built for pitch decks, planning submissions, and pre-sale marketing.</p>
+          <span class="facet-tag">Architecture / Interiors</span>
+        </div>
+        <div class="facet-card">
+          <svg class="facet-icon" viewBox="0 0 42 42" fill="none"><circle cx="21" cy="14" r="7" stroke="#FF3EA5" stroke-width="1.6"/><path d="M8 36 C8 26 34 26 34 36" stroke="#FF3EA5" stroke-width="1.6"/></svg>
+          <h3>Animation &amp; VFX / Game Assets</h3>
+          <p>Characters, environments, and effects built game-ready or cinema-ready — optimized topology for real-time engines, full fidelity for final-frame render.</p>
+          <span class="facet-tag">Animation / VFX / Games</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="process" class="process-alt">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">How an engagement runs</span>
+        <h2>Four stages, start to delivery.</h2>
+      </div>
+      <div class="process-row">
+        <div class="process-step">
+          <div class="process-num">01</div>
+          <h3>Discover</h3>
+          <p>Brief, references, and technical constraints gathered — file formats, poly budgets, deadlines, deliverable specs.</p>
+        </div>
+        <div class="process-step">
+          <div class="process-num">02</div>
+          <h3>Block</h3>
+          <p>Greybox model, camera, and composition locked before any surfacing work begins. Cheap to change here.</p>
+        </div>
+        <div class="process-step">
+          <div class="process-num">03</div>
+          <h3>Render</h3>
+          <p>Materials, lighting, and final passes. Iterative reviews against the locked composition, not from scratch.</p>
+        </div>
+        <div class="process-step">
+          <div class="process-num">04</div>
+          <h3>Deliver</h3>
+          <p>Full-resolution renders, engine-ready assets, and a defined round of revisions — handed off in the formats you need.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <section id="work">
+    <div class="wrap">
+      <div class="section-head">
+        <span class="eyebrow">Selected work</span>
+        <h2>A few things we've built.</h2>
+        <p>Placeholder plates below — swap in your own renders and stills when you're ready to populate the gallery.</p>
+      </div>
+      <div class="work-grid">
+        <div class="work-tile"><span class="work-label">PROD-04 · product render</span></div>
+        <div class="work-tile"><span class="work-label">RES-12 · interior fly-through</span></div>
+        <div class="work-tile"><span class="work-label">CHAR-09 · game asset</span></div>
+        <div class="work-tile"><span class="work-label">ARCH-21 · exterior visualization</span></div>
+        <div class="work-tile"><span class="work-label">VFX-06 · effects sim</span></div>
+        <div class="work-tile"><span class="work-label">PROD-17 · configurator</span></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="cta-band" id="contact">
+    <div class="wrap">
+      <span class="eyebrow">Get in touch</span>
+      <h2 style="margin-top:16px;">Ready to build in another dimension?</h2>
+      <p style="color:var(--text-dim); max-width:520px; margin:0 auto 34px; font-size:15.5px;">Tell us what you're making — a product, a building, a character — and we'll tell you what it takes to see it before it's real.</p>
+      <div class="hero-ctas" style="justify-content:center;">
+        <a href="mailto:hello@tesseractinteractive.com" class="btn-primary">hello@tesseractinteractive.com</a>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>
+  <div class="wrap footer-row">
+    <span>© 2026 TESSERACT INTERACTIVE</span>
+    <span>PRODUCT · ARCHITECTURE · ANIMATION</span>
+  </div>
+</footer>
+
+</body>
+</html>
