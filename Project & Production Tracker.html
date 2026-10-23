@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Project & Production Tracker</title>
+<style>
+:root{--bg:#f6f5f1;--card:#fff;--ink:#1f2328;--mute:#6b7280;--line:#e4e2da;--acc:#0f766e;--accbg:#d9f0ec;--warn:#b45309;--bad:#b91c1c;--ok:#15803d;
+box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#15171a;--card:#1e2125;--ink:#ecebe6;--mute:#9aa0a8;--line:#31353b;--acc:#2dd4bf;--accbg:#12332f;--warn:#fbbf24;--bad:#f87171;--ok:#4ade80;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#15171a;--card:#1e2125;--ink:#ecebe6;--mute:#9aa0a8;--line:#31353b;--acc:#2dd4bf;--accbg:#12332f;--warn:#fbbf24;--bad:#f87171;--ok:#4ade80;color-scheme:dark}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+.wrap{max-width:860px;margin:0 auto;padding:16px}
+h1{font-size:22px;margin:4px 0 2px}.sub{color:var(--mute);margin:0 0 14px;font-size:13px}
+.tabs{display:flex;gap:6px;margin-bottom:14px;overflow-x:auto}
+.tab{border:1px solid var(--line);background:var(--card);color:var(--ink);padding:8px 14px;border-radius:999px;cursor:pointer;font:inherit;white-space:nowrap}
+.tab.on{background:var(--acc);color:var(--bg);border-color:var(--acc);font-weight:600}
+.card{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;margin-bottom:14px}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+input,select,button.btn{font:inherit;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:8px 10px;min-width:0}
+input[type=text]{flex:1;min-width:150px}
+button.btn{background:var(--acc);color:var(--bg);border:0;font-weight:600;cursor:pointer}
+.bar{height:8px;background:var(--line);border-radius:99px;overflow:hidden;margin:8px 0 2px}
+.bar i{display:block;height:100%;background:var(--acc);transition:width .25s}
+.small{font-size:12px;color:var(--mute)}
+.task{display:flex;align-items:center;gap:10px;padding:10px 4px;border-bottom:1px solid var(--line)}
+.task:last-child{border:0}
+.task input[type=checkbox]{width:20px;height:20px;accent-color:var(--acc);flex:none;cursor:pointer}
+.task .t{flex:1;min-width:0;word-break:break-word}
+.task.done .t{text-decoration:line-through;color:var(--mute)}
+.tag{font-size:11px;padding:2px 8px;border-radius:99px;background:var(--accbg);color:var(--acc);white-space:nowrap}
+.p-High{color:var(--bad)}.p-Medium{color:var(--warn)}.p-Low{color:var(--ok)}
+.x{background:none;border:0;color:var(--mute);cursor:pointer;font-size:18px;padding:2px 6px}
+.x:hover{color:var(--bad)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;margin-bottom:14px}
+.stat{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.stat b{display:block;font-size:22px}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th,td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line);white-space:nowrap}
+th{color:var(--mute);font-weight:600;font-size:12px}
+.empty{color:var(--mute);text-align:center;padding:18px 0}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Project &amp; Production Tracker</h1>
+  <p class="sub">Plan your day, track projects, and log production output. Saved in this browser.</p>
+  <div class="tabs" id="tabs">
+    <button class="tab on" data-tab="daily">Daily To-Do</button>
+    <button class="tab" data-tab="projects">Projects</button>
+    <button class="tab" data-tab="prod">Production</button>
+  </div>
+  <div id="view"></div>
+</div>
+<script>
+const KEY="ppt_v1";
+let S={tasks:[],projects:[],prod:[]},tab="daily",date=new Date().toISOString().slice(0,10);
+try{const r=localStorage.getItem(KEY);if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+const uid=()=>Math.random().toString(36).slice(2,9);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const $=id=>document.getElementById(id);
+const pct=(a,b)=>b?Math.round(a/b*100):0;
+
+function projOpts(sel){return '<option value="">No project</option>'+S.projects.map(p=>`<option value="${p.id}" ${p.id===sel?"selected":""}>${esc(p.name)}</option>`).join("")}
+function pname(id){const p=S.projects.find(p=>p.id===id);return p?p.name:""}
+
+function daily(){
+  const list=S.tasks.filter(t=>t.date===date);
+  const done=list.filter(t=>t.done).length;
+  const rank={High:0,Medium:1,Low:2};
+  list.sort((a,b)=>a.done-b.done||rank[a.pri]-rank[b.pri]);
+  return `<div class="card">
+   <div class="row" style="margin-bottom:10px"><input type="date" id="dt" value="${date}"><button class="btn" data-act="today" style="background:var(--accbg);color:var(--acc)">Today</button></div>
+   <div class="row"><input type="text" id="tt" placeholder="Add a task for this day…" maxlength="200">
+    <select id="tp">${projOpts("")}</select>
+    <select id="tr"><option>High</option><option selected>Medium</option><option>Low</option></select>
+    <button class="btn" data-act="addtask">Add</button></div>
+  </div>
+  <div class="card">
+   <div class="row" style="justify-content:space-between"><b>${done} of ${list.length} completed</b><span class="small">${pct(done,list.length)}%</span></div>
+   <div class="bar"><i style="width:${pct(done,list.length)}%"></i></div>
+   ${list.length?list.map(t=>`<div class="task ${t.done?"done":""}"><input type="checkbox" data-act="toggle" data-id="${t.id}" ${t.done?"checked":""} aria-label="Mark complete"><span class="t">${esc(t.text)}</span>${t.project?`<span class="tag">${esc(pname(t.project))}</span>`:""}<span class="small p-${t.pri}">${t.pri}</span><button class="x" data-act="deltask" data-id="${t.id}" aria-label="Delete">×</button></div>`).join(""):'<div class="empty">No tasks for this day yet.</div>'}
+   ${list.some(t=>!t.done)?`<div style="margin-top:10px"><button class="btn" data-act="carry" style="background:var(--accbg);color:var(--acc)">Move unfinished to tomorrow</button></div>`:""}
+  </div>`;
+}
+
+function projects(){
+  return `<div class="card"><div class="row">
+   <input type="text" id="pn" placeholder="Project name" maxlength="80">
+   <input type="text" id="po" placeholder="Owner" style="max-width:160px">
+   <input type="date" id="pd">
+   <select id="ps"><option>Planned</option><option selected>In progress</option><option>On hold</option><option>Done</option></select>
+   <button class="btn" data-act="addproj">Add project</button></div></div>
+  ${S.projects.length?S.projects.map(p=>{const ts=S.tasks.filter(t=>t.project===p.id),d=ts.filter(t=>t.done).length,late=p.due&&p.status!=="Done"&&p.due<new Date().toISOString().slice(0,10);
+   return `<div class="card"><div class="row" style="justify-content:space-between"><b>${esc(p.name)}</b><span class="row"><select data-act="pstatus" data-id="${p.id}">${["Planned","In progress","On hold","Done"].map(s=>`<option ${s===p.status?"selected":""}>${s}</option>`).join("")}</select><button class="x" data-act="delproj" data-id="${p.id}" aria-label="Delete">×</button></span></div>
+   <div class="small">${p.owner?"Owner: "+esc(p.owner)+" · ":""}${p.due?`Due ${p.due}${late?' <b class="p-High">(overdue)</b>':""}`:"No due date"}</div>
+   <div class="bar"><i style="width:${pct(d,ts.length)}%"></i></div><div class="small">${d}/${ts.length} linked tasks done (${pct(d,ts.length)}%)</div></div>`}).join(""):'<div class="empty">No projects yet. Add one above.</div>'}`;
+}
+
+function prod(){
+  const tT=S.prod.reduce((a,r)=>a+r.target,0),tA=S.prod.reduce((a,r)=>a+r.actual,0);
+  const rows=[...S.prod].sort((a,b)=>b.date.localeCompare(a.date));
+  return `<div class="stats"><div class="stat"><span class="small">Total target</span><b>${tT}</b></div><div class="stat"><span class="small">Total produced</span><b>${tA}</b></div><div class="stat"><span class="small">Efficiency</span><b>${pct(tA,tT)}%</b></div></div>
+  <div class="card"><div class="row"><input type="date" id="rd" value="${date}"><input type="text" id="ri" placeholder="Item / product" maxlength="80">
+   <input type="number" id="rt" placeholder="Target" min="0" style="width:90px"><input type="number" id="ra" placeholder="Actual" min="0" style="width:90px">
+   <select id="rp">${projOpts("")}</select><button class="btn" data-act="addprod">Log</button></div></div>
+  <div class="card scroll">${rows.length?`<table><tr><th>Date</th><th>Item</th><th>Project</th><th>Target</th><th>Actual</th><th>Eff.</th><th></th></tr>${rows.map(r=>`<tr><td>${r.date}</td><td>${esc(r.item)}</td><td>${esc(pname(r.project))}</td><td>${r.target}</td><td>${r.actual}</td><td class="${r.actual>=r.target?"p-Low":"p-Medium"}">${pct(r.actual,r.target)}%</td><td><button class="x" data-act="delprod" data-id="${r.id}" aria-label="Delete">×</button></td></tr>`).join("")}</table>`:'<div class="empty">No production logged yet.</div>'}</div>`;
+}
+
+function render(){
+  document.querySelectorAll(".tab").forEach(b=>b.classList.toggle("on",b.dataset.tab===tab));
+  $("view").innerHTML=tab==="daily"?daily():tab==="projects"?projects():prod();
+}
+const val=id=>($(id)||{}).value||"";
+document.addEventListener("click",e=>{
+  const tb=e.target.closest(".tab");if(tb){tab=tb.dataset.tab;render();return}
+  const el=e.target.closest("[data-act]");if(!el||el.tagName==="SELECT"||el.type==="checkbox")return;
+  const a=el.dataset.act,id=el.dataset.id;
+  if(a==="today"){date=new Date().toISOString().slice(0,10)}
+  else if(a==="addtask"){const t=val("tt").trim();if(!t)return;S.tasks.push({id:uid(),date,text:t,project:val("tp"),pri:val("tr"),done:false})}
+  else if(a==="deltask")S.tasks=S.tasks.filter(t=>t.id!==id);
+  else if(a==="carry"){const n=new Date(date+"T00:00");n.setDate(n.getDate()+1);const nd=n.toISOString().slice(0,10);S.tasks.forEach(t=>{if(t.date===date&&!t.done)t.date=nd});date=nd}
+  else if(a==="addproj"){const n=val("pn").trim();if(!n)return;S.projects.push({id:uid(),name:n,owner:val("po").trim(),due:val("pd"),status:val("ps")})}
+  else if(a==="delproj"){S.projects=S.projects.filter(p=>p.id!==id);S.tasks.forEach(t=>{if(t.project===id)t.project=""})}
+  else if(a==="addprod"){const i=val("ri").trim();if(!i)return;S.prod.push({id:uid(),date:val("rd")||date,item:i,target:+val("rt")||0,actual:+val("ra")||0,project:val("rp")})}
+  else if(a==="delprod")S.prod=S.prod.filter(r=>r.id!==id);
+  save();render();
+});
+document.addEventListener("change",e=>{
+  const el=e.target;
+  if(el.id==="dt"){date=el.value||date;render();return}
+  if(el.dataset.act==="toggle"){const t=S.tasks.find(t=>t.id===el.dataset.id);if(t)t.done=el.checked;save();render()}
+  if(el.dataset.act==="pstatus"){const p=S.projects.find(p=>p.id===el.dataset.id);if(p)p.status=el.value;save();render()}
+});
+document.addEventListener("keydown",e=>{if(e.key==="Enter"&&e.target.id==="tt")document.querySelector('[data-act="addtask"]').click()});
+render();
+</script>
+</body>
+</html>
